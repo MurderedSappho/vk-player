@@ -28,7 +28,6 @@
                  :class "form-control"
                  :placeholder "Search"}]]])
 
-
 (defn track-control
   [track]
   (let [src "data"]
@@ -54,12 +53,6 @@
                    [:div.btn-group.btn-group-justified
                      (if (:playing? track)
                        [:div.btn.btn-default
-                        {:on-click
-                          #(re-frame/dispatch [:track-stop (:aid track)])  }
-                          "Stop"]
-                       [:div.btn.btn-default
-                        {:on-click
-                          #(re-frame/dispatch [:track-play (:aid track)]) }
-                          "Play"])
-
-                     [:div.btn.btn-default "Pause"]]]]])})))
+                        {:on-click #(re-frame/dispatch [:track-stop (:aid track)])  } "Stop"]
+                       [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:track-play (:aid track)]) } "Play"])
+                [:div.btn.btn-default {:on-click #(re-frame/dispatch [:track-stop (:aid track)])  } "Pause"]]]]])})))

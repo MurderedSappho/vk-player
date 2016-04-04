@@ -21,7 +21,7 @@
  :search-track-text-changed
  (fn
    [db [_ value]]
-   (js/VK.Api.call "audio.get" { :q value } #(re-frame/dispatch [:process-search-track-response %]))
+   (js/VK.Api.call "audio.get" { "q" value } #(re-frame/dispatch [:process-search-track-response %]))
    (assoc db :search-track-text value)))
 
 (re-frame/register-handler
