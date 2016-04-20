@@ -32,23 +32,32 @@
   [track]
   (let [src "data"]
      (reagent/create-class
-       {:component-will-receive-props
+       {
+        :component-will-receive-props
         (fn [component source]
           (let
             [playing? (:playing? (nth source 1))
              audio (.getDOMNode component.refs.audio)]
               (if playing?
-                (-> audio .play)
-                (-> audio .pause))))
+                  (-> audio .play)
+                  (-> audio .pause))))
+
+        :component-did-mount
+        (fn [component source]
+          (let [audio (.getDOMNode component.refs.audio)]
+            (set! (.-ontimeupdate audio) #(re-frame/dispatch [:track-time-update {:track-time (.-currentTime audio)
+                                                                                  :aid (:aid track)}]))))
 
         :reagent-render
          (fn [track]
               [:div.panel.panel-default
                 [:div.panel-heading (:title track)]
-                [:audio {:src (:url track) :preload "none" :ref "audio" } ]
+                [:audio {:src (:url track)
+                         :preload "metadata"
+                         :ref "audio"}]
                 [:div.panel-body
                  [:div.progress
-                   [:div.progress-bar {:width "0%"}]]
+                   [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]
                  [:div.col-lg-2
                    [:div.btn-group.btn-group-justified
                      (if (:playing? track)

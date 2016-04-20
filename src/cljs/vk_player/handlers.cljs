@@ -13,7 +13,10 @@
   (fn
     [db [_ response]]
     (let [founded-tracks (map
-                           #(assoc (js->clj % :keywordize-keys true) :playing? false)
+                           #(assoc
+                              (js->clj % :keywordize-keys true)
+                              :playing? false
+                              :progress 0)
                            response.response)]
       (assoc db :founded-tracks founded-tracks))))
 
@@ -40,7 +43,22 @@
  (fn
    [db [_ aid]]
      (let [founded-tracks (map
-                            #(if (= (:aid %) aid) (assoc % :playing? false) %)
-                            (:founded-tracks db))]
+                            #(if (= (:aid %) aid)
+                               (assoc % :playing? false) %)
+                                (:founded-tracks db))]
        (assoc db :founded-tracks founded-tracks))))
+
+(re-frame/register-handler
+ :track-time-update
+ (fn
+   [db [_ data]]
+     (let [aid (:aid data)
+           track-time (:track-time data)
+           founded-tracks (map
+                            #(let [] (if (= (:aid %) aid)
+                                       (assoc % :progress (* 100 (/ track-time (:duration %))))
+                                        %))
+                                (:founded-tracks db))]
+       (assoc db :founded-tracks founded-tracks))))
+
 
