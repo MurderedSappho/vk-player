@@ -2,4 +2,7 @@
 
 (def default-db
   {:search-track-text ""
-   :founded-tracks [] })
+   :founded-tracks {}
+   :active-track nil
+   :active-track-aid :0
+   :options { :repeat-always? false }})

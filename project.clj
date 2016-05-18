@@ -19,11 +19,11 @@
                         :source-paths ["src/cljs"]
                         :figwheel {:on-jsload "vk-player.core/mount-root"}
                         :compiler {:main vk-player.core
-;;                                    :libs ["resources/public/js/libs/vk-api.js"]
                                    :output-to "resources/public/js/compiled/app.js"
                                    :output-dir "resources/public/js/compiled/out"
                                    :asset-path "js/compiled/out"
                                    :source-map-timestamp true
+                                   :source-map true
                                    :optimizations :none}}
 
                        {:id "min"
