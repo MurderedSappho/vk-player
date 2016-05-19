@@ -20,11 +20,12 @@
 (defn header
   [search-track-text active-track options]
   [:nav.navbar.navbar-default.navbar-fixed-top
-   [:div.container.fluid
-    [:div.collapse.navbar-collapse
-     [active-track-control active-track]
-     [options-control options]
-     [search-track search-track-text]]]])
+   [:div.container
+    [:div.row
+     [:div.collapse.navbar-collapse
+      [active-track-control active-track]
+      [options-control options]
+      [search-track search-track-text]]] ]])
 
 (defn search-track
   [search-text]
@@ -41,25 +42,26 @@
   [track]
   (let [aid (keyword (str (:aid track)))]
     (if (not (nil? track))
-    [:div
-   [:form.navbar-form.navbar-left
-    [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:play-previous aid]) } "Prev" ]
-    (if (:playing? track)
-      [:div.btn.btn-default
-       {:on-click #(re-frame/dispatch [:track-pause aid])  } "Pause"]
-      [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:track-play aid]) } "Play"])
-    [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:play-next aid]) } "Next"]]
-   [:form.navbar-form     [:div.progress.col-lg-2
-                           [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]]])))
+      [:div.col-lg-7
+       [:form.navbar-form.navbar-left
+        [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:play-previous aid]) } "Prev" ]
+        (if (:playing? track)
+          [:div.btn.btn-default
+           {:on-click #(re-frame/dispatch [:track-pause aid])  } "Pause"]
+          [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:track-play aid]) } "Play"])
+        [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:play-next aid]) } "Next"]]
+       [:a (str (:title track) " — " (:artist track))]
+       [:form.navbar-form     [:div.progress.col-lg-6
+                               [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]]
+       [:ul.nav.navbar-nav ]])))
 
 (defn options-control
   [options]
   (let [repeat (:repeat-always? options)
         repeat-button-class (if repeat "btn-primary" "btn-default")]
-    [:div
-   [:form.navbar-form.navbar-right
-    [:div.btn.btn-default { :on-click #(re-frame/dispatch [:shuffle]) } "Shuffle"]
-    [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]]]))
+    [:form.navbar-form.navbar-right
+     [:div.btn.btn-default { :on-click #(re-frame/dispatch [:shuffle]) } "Shuffle"]
+     [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]]))
 
 
 (defn track-control
@@ -83,15 +85,15 @@
           (let [audio (.getDOMNode component.refs.audio)]
             (set! (.-ontimeupdate audio) #(re-frame/dispatch [:track-time-update {:track-time (.-currentTime audio)
                                                                                   :aid aid}]))
-            (set! (.-onended audio) #(re-frame/dispatch [:play-next aid]))))
+            (set! (.-onended audio) #(re-frame/dispatch [:track-end aid]))))
 
         :reagent-render
         (fn [track]
           [:div.panel.panel-default
-           [:div.panel-heading (:title track)]
+           [:div.panel-heading (str (:title track) " — " (:artist track)) ]
            [:audio {:src (:url track)
                     :ref "audio"
-                    :preload "node" }]
+                    :preload "none" }]
            [:div.panel-body
             [:div.progress
              [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]

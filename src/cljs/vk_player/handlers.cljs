@@ -12,39 +12,25 @@
   :process-search-track-response
   (fn
     [db [_ response]]
-    (let [founded-tracks (into
-                           {}
-                           (map
-                             #(hash-map
-                                (let
-                                  [aid-key (keyword (str (:aid %)))]
-                                  aid-key)
-                                %)
-                             (map
-                               #(assoc
-                                  (js->clj % :keywordize-keys true)
-                                  :playing? false
-                                  :progress 0)
-                               (rest response.response))))]
+    (let [founded-tracks (into {} (map #(hash-map (let [aid-key (keyword (str (:aid %)))] aid-key) %)
+                                       (map
+                                         #(assoc (js->clj % :keywordize-keys true) :playing? false :progress 0)
+                                         (rest response.response))))]
       (assoc db :founded-tracks founded-tracks))))
 
 (re-frame/register-handler
   :search-track-text-changed
   (fn
     [db [_ value]]
-    (js/VK.Api.call "audio.search" (js-obj "q" value "count" 8)  #(re-frame/dispatch [:process-search-track-response %]))
+    (js/VK.Api.call "audio.search" (js-obj "q" value "count" 8) #(re-frame/dispatch [:process-search-track-response %]))
     (assoc db :search-track-text value)))
 
 (re-frame/register-handler
   :track-play
   (fn
     [db [_ aid]]
-    (js/console.log aid)
     (let [db-tracks (:founded-tracks db)
-          founded-tracks (update-in
-                           db-tracks
-                           [aid]
-                           #(assoc % :playing? true))]
+          founded-tracks (update-in db-tracks [aid] #(assoc % :playing? true))]
       (assoc db :founded-tracks founded-tracks :active-track-aid aid))))
 
 (re-frame/register-handler
@@ -57,17 +43,13 @@
                            #(assoc % :playing? false))]
       (assoc db :founded-tracks founded-tracks))))
 
-
 (re-frame/register-handler
   :track-time-update
   (fn
     [db [_ data]]
     (let [aid (:aid data)
           track-time (:track-time data)
-          founded-tracks (update-in
-                           (:founded-tracks db)
-                           [aid]
-                           #(assoc % :progress (* 100 (/ track-time (:duration %)))))]
+          founded-tracks (update-in (:founded-tracks db) [aid] #(assoc % :progress (* 100 (/ track-time (:duration %)))))]
       (assoc db :founded-tracks founded-tracks))))
 
 (re-frame/register-handler
@@ -75,39 +57,31 @@
   (fn
     [db [_ aid]]
     (let [founded-tracks (:founded-tracks db)
-          repeat? (:repeat-always? (:options db))]
-      (if (not repeat?)
-        (let [stop-all (update-in
-                         founded-tracks
-                         [aid]
-                         #(assoc % :playing? false :progress 0))
-              next-aid (first (second (drop-while #(not (= (first %) aid)) stop-all)))
-              play-next (update-in
-                          stop-all
-                          [next-aid]
-                          #(assoc % :playing? true))]
-        (assoc db :founded-tracks play-next :active-track-aid next-aid))
-        db))))
+          stop-all (update-in founded-tracks [aid] #(assoc % :playing? false :progress 0))
+          new-aid (first (second (drop-while #(not (= (first %) aid)) stop-all)))
+          next-aid (if (nil? new-aid) aid new-aid)
+          play-next (update-in stop-all [next-aid] #(assoc % :playing? true))]
+      (assoc db :founded-tracks play-next :active-track-aid next-aid))))
 
 (re-frame/register-handler
   :play-previous
   (fn
     [db [_ aid]]
     (let [founded-tracks (:founded-tracks db)
-          repeat? (:repeat-always? (:options db))]
+          stop-all (update-in founded-tracks [aid] #(assoc % :playing? false :progress 0))
+          new-aid (first (last (take-while #(not (= (first %) aid)) stop-all)))
+          previous-aid (if (nil? new-aid) aid new-aid)
+          play-previous (update-in stop-all [previous-aid] #(assoc % :playing? true))]
+      (assoc db :founded-tracks play-previous :active-track-aid previous-aid))))
+
+(re-frame/register-handler
+  :track-end
+  (fn
+    [db [_ aid]]
+    (let [repeat? (:repeat-always? (:options db))]
       (if (not repeat?)
-        (let [stop-all (update-in
-                         founded-tracks
-                         [aid]
-                         #(assoc % :playing? false :progress 0))
-              previous-aid (first (last (take-while #(not (= (first %) aid)) stop-all)))
-              play-previous (update-in
-                          stop-all
-                          [previous-aid]
-                          #(assoc % :playing? true))]
-          (println previous-aid)
-        (assoc db :founded-tracks play-previous :active-track-aid previous-aid))
-        db))))
+        (re-frame/dispatch [:play-next aid]))
+      db)))
 
 (re-frame/register-handler
   :shuffle
