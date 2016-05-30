@@ -9,6 +9,28 @@
     merge db db/default-db))
 
 (re-frame/register-handler
+  :check-login-status
+  (fn
+    [db [_]]
+    (js/VK.Auth.getLoginStatus #(re-frame/dispatch [:progress-login %]))
+    db))
+
+(re-frame/register-handler
+  :login
+  (fn
+    [db [_]]
+    (js/VK.Auth.login #(re-frame/dispatch [:progress-login %]))
+    db))
+
+(re-frame/register-handler
+  :progress-login
+  (fn
+    [db [_ response]]
+    (let [auth-response (js->clj response :keywordize-keys true)
+          logged-in? (= (:status auth-response) "connected")]
+      (assoc db :logged-in? logged-in?))))
+
+(re-frame/register-handler
   :process-search-track-response
   (fn
     [db [_ response]]

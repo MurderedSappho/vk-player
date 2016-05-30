@@ -2,6 +2,7 @@
 
 (def default-db
   {:search-track-text ""
+   :logged-in? true
    :founded-tracks {}
    :active-track nil
    :active-track-aid :0

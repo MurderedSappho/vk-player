@@ -8,6 +8,11 @@
     (reaction (:search-track-text @db))))
 
 (re-frame/register-sub
+  :logged-in?
+  (fn [db _]
+    (reaction (:logged-in? @db))))
+
+(re-frame/register-sub
   :founded-tracks
   (fn [db _]
     (reaction (:founded-tracks @db))))

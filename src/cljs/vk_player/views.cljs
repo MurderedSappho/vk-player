@@ -8,42 +8,54 @@
         founded-tracks (re-frame/subscribe [:founded-tracks])
         active-track (re-frame/subscribe [:active-track])
         active-track-aid (re-frame/subscribe [:active-track-aid])
-        options (re-frame/subscribe [:options])]
+        options (re-frame/subscribe [:options])
+        logged-in? (re-frame/subscribe [:logged-in?])]
     (fn []
       [:div.container-fluid
-       [header @search-track-text @active-track @options]
+       [header @search-track-text @active-track @options @logged-in?]
        [:div.row
         [:div.col-lg-3]
-        [:div.col-lg-6 (let [volume (str (/ (:volume @options) 100))
-                             active-aid @active-track-aid]
-                         (for [track-item  @founded-tracks]
-                           (let [aid (get track-item 0)
-                                 track (get track-item 1)
-                                 active? (= aid active-aid)]
-                             ^{:key aid} [track-control track aid volume active?])
-                         ))]
+        [:div.col-lg-6 { :style {:margin-top "120px"} }
+         (let [volume (str (/ (:volume @options) 100))
+               active-aid @active-track-aid]
+           (for [track-item  @founded-tracks]
+             (let [aid (get track-item 0)
+                   track (get track-item 1)
+                   active? (= aid active-aid)]
+               ^{:key aid} [track-control track aid volume active?])))]
         [:div.col-lg-3]]])))
 
 (defn header
-  [search-track-text active-track options]
+  [search-track-text active-track options logged-in?]
   [:nav.navbar.navbar-default.navbar-fixed-top
    [:div.container
     [:div.row
      [:div.collapse.navbar-collapse
       [active-track-control active-track]
       [options-control options]
-      [search-track search-track-text]]]]])
+      [search-track search-track-text]
+      [auth-section logged-in?]]]]])
 
 (defn search-track
   [search-text]
-  [:form {:class "navbar-form navbar-right", :role "search"}
+  [:div {:class "navbar-form navbar-right", :role "search"}
    [:div {:class "form-group"}
     [:input {:value search-text
              :on-change #(re-frame/dispatch
                            [:search-track-text-changed (-> % .-target .-value)])
+             :submit #(constantly false)
              :type "text"
              :class "form-control"
              :placeholder "Search"}]]])
+
+(defn auth-section
+  [is-logged-in]
+  (if is-logged-in
+    nil
+    [:div
+     [:div.col-lg-2.navbar-left
+      [:form.navbar-form
+       [:div.btn.btn-default { :on-click #(re-frame/dispatch [:login]) } "Login"]]]]))
 
 (defn active-track-control
   [track]
@@ -69,21 +81,19 @@
         volume (:volume options)]
     [:div
      [:div.col-lg-1.navbar-right           [volume-slider volume]]
-         [:div.col-lg-2.navbar-right
+     [:div.col-lg-2.navbar-right
 
-     [:form.navbar-form
-     [:div.btn.btn-default { :on-click #(re-frame/dispatch [:shuffle]) } "Shuffle"]
-     [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]
-         ]]]
-
-))
+      [:form.navbar-form
+       [:div.btn.btn-default { :on-click #(re-frame/dispatch [:shuffle]) } "Shuffle"]
+       [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]
+       ]]]))
 
 
 (defn volume-slider
   [volume-value]
-    [:input { :type "range" :value volume-value :min 0 :max 100
-              :style { :width "100%" :-webkit-appearance "slider-vertical" :height "90px" }
-              :on-change #(re-frame/dispatch [:volume-change (-> % .-target .-value)])}])
+  [:input { :type "range" :value volume-value :min 0 :max 100
+            :style { :width "100%" :-webkit-appearance "slider-vertical" :height "90px" }
+            :on-change #(re-frame/dispatch [:volume-change (-> % .-target .-value)])}])
 
 (defn track-control
   [track aid active?]

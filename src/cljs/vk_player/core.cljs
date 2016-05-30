@@ -14,6 +14,7 @@
                   (.getElementById js/document "app")))
 
 (defn ^:export init []
-  (js* "VK.init({apiId: 4241324})" )
+  (js/VK.init (clj->js {:apiId 4241324}) )
   (re-frame/dispatch-sync [:initialize-db])
+  (re-frame/dispatch [:check-login-status])
   (mount-root))
