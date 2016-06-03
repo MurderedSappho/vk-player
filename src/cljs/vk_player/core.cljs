@@ -10,6 +10,12 @@
   (println "dev mode"))
 
 (defn mount-root []
+  (set! (.-onscroll js/window)
+          #(let
+              [current-scroll (.-pageYOffset js/window)
+               total-scroll (.-clientHeight (.-body js/document))]
+                (if (< (* total-scroll 0.8) current-scroll)
+                  (re-frame/dispatch [:load-tracks-by-scroll]))))
   (reagent/render [views/main-panel]
                   (.getElementById js/document "app")))
 

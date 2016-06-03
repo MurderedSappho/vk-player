@@ -3,9 +3,14 @@
   (:require [re-frame.core :as re-frame]))
 
 (re-frame/register-sub
+  :database
+  (fn [db _]
+    (reaction @db)))
+
+(re-frame/register-sub
   :search-track-text
   (fn [db _]
-    (reaction (:search-track-text @db))))
+    (reaction (:search-track-text (:audio-query @db)))))
 
 (re-frame/register-sub
   :logged-in?
@@ -16,6 +21,11 @@
   :founded-tracks
   (fn [db _]
     (reaction (:founded-tracks @db))))
+
+(re-frame/register-sub
+  :loading?
+  (fn [db _]
+    (reaction (:loading? @db))))
 
 (re-frame/register-sub
   :active-track

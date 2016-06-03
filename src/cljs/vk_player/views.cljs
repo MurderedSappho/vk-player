@@ -9,8 +9,10 @@
         active-track (re-frame/subscribe [:active-track])
         active-track-aid (re-frame/subscribe [:active-track-aid])
         options (re-frame/subscribe [:options])
-        logged-in? (re-frame/subscribe [:logged-in?])]
+        logged-in? (re-frame/subscribe [:logged-in?])
+        database (re-frame/subscribe [:database])]
     (fn []
+      (println @database)
       [:div.container-fluid
        [header @search-track-text @active-track @options @logged-in?]
        [:div.row
@@ -21,8 +23,9 @@
            (for [track-item  @founded-tracks]
              (let [aid (get track-item 0)
                    track (get track-item 1)
-                   active? (= aid active-aid)]
-               ^{:key aid} [track-control track aid volume active?])))]
+                   active? (= aid active-aid)
+                   hidden? (:hidden? track)]
+               ^{:key aid} [track-control track aid volume active? hidden?])))]
         [:div.col-lg-3]]])))
 
 (defn header
@@ -43,7 +46,7 @@
     [:input {:value search-text
              :on-change #(re-frame/dispatch
                            [:search-track-text-changed (-> % .-target .-value)])
-             :submit #(constantly false)
+             :on-key-up #(if (= 13 (-> % .-keyCode)) (re-frame/dispatch [:search-tracks]))
              :type "text"
              :class "form-control"
              :placeholder "Search"}]]])
@@ -60,6 +63,7 @@
 (defn active-track-control
   [track]
   (let [aid (keyword (str (:aid track)))]
+    (println track)
     (if (not (nil? track))
       [:div.col-lg-7
        [:form.navbar-form.navbar-left
@@ -85,8 +89,7 @@
 
       [:form.navbar-form
        [:div.btn.btn-default { :on-click #(re-frame/dispatch [:shuffle]) } "Shuffle"]
-       [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]
-       ]]]))
+       [:div.btn { :class repeat-button-class :on-click #(re-frame/dispatch [:repeat-always?])} "Repeat"]]]]))
 
 
 (defn volume-slider
@@ -96,7 +99,7 @@
             :on-change #(re-frame/dispatch [:volume-change (-> % .-target .-value)])}])
 
 (defn track-control
-  [track aid active?]
+  [track aid active? hidden?]
   (let [src "data"]
     (reagent/create-class
       {
@@ -121,19 +124,21 @@
             (set! (.-onended audio) #(re-frame/dispatch [:track-end aid]))))
 
         :reagent-render
-        (fn [track aid volume active?]
-          (println active?)
-          [:div.panel.panel-default { :class (if active? "panel-primary") }
-           [:div.panel-heading (str (:title track) " — " (:artist track)) ]
-           [:audio {:src (:url track)
-                    :ref "audio"
-                    :preload "none" }]
-           [:div.panel-body
-            [:div.progress
-             [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]
-            [:div.col-lg-2
-             [:div.btn-group.btn-group-justified
-              (if (:playing? track)
-                [:div.btn.btn-default
-                 {:on-click #(re-frame/dispatch [:track-pause aid])  } "Pause"]
-                [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:track-play aid]) } "Play"])]]]])})))
+        (fn [track aid volume active? hidden?]
+          (if hidden? [:audio {:src (:url track)
+                               :ref "audio"
+                               :preload "none" }]
+            [:div.panel.panel-default { :class (if active? "panel-primary") }
+             [:div.panel-heading (str (:title track) " — " (:artist track)) ]
+             [:audio {:src (:url track)
+                      :ref "audio"
+                      :preload "none" }]
+             [:div.panel-body
+              [:div.progress
+               [:div.progress-bar { :style {:width (str (:progress track) "%")}}]]
+              [:div.col-lg-2
+               [:div.btn-group.btn-group-justified
+                (if (:playing? track)
+                  [:div.btn.btn-default
+                   {:on-click #(re-frame/dispatch [:track-pause aid])  } "Pause"]
+                  [:div.btn.btn-default {:on-click  #(re-frame/dispatch [:track-play aid]) } "Play"])]]]]))})))

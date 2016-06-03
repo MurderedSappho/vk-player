@@ -1,6 +1,7 @@
 (ns vk-player.handlers
   (:require [re-frame.core :as re-frame]
-            [vk-player.db :as db]))
+            [vk-player.db :as db]
+            [vk-player.utils :as utils]))
 
 (re-frame/register-handler
   :initialize-db
@@ -31,42 +32,72 @@
       (assoc db :logged-in? logged-in?))))
 
 (re-frame/register-handler
+  :search-tracks
+  (fn
+    [db [_]]
+    (let [callback #(re-frame/dispatch [:process-search-track-response %])
+          audio-query (:audio-query db)
+          search-query (clj->js {:q (:search-track-text audio-query)})]
+      (js/VK.Api.call "audio.search" search-query callback)
+      (assoc db :loading? true))))
+
+(re-frame/register-handler
+  :load-tracks-by-scroll
+  (fn
+    [db [_]]
+    (if (:loading? db)
+      db
+      (let [audio-query (:audio-query db)
+            offset (+ (:offset audio-query) 25)
+            search-text (:search-track-text audio-query)
+            search-query (clj->js {:q search-text :offset offset})
+            callback #(re-frame/dispatch [:process-load-tracks-by-scroll %])
+            set-loading (assoc db :loading? true :offset offset)]
+        (js/VK.Api.call "audio.search" search-query callback)
+        (update-in set-loading [:audio-query :offset] (constantly offset))))))
+
+
+
+(re-frame/register-handler
+  :process-load-tracks-by-scroll
+  (fn
+    [db [_ response]]
+    (let
+      [vk-track-response (rest response.response)
+       track-list (map #(merge (js->clj % :keywordize-keys true) utils/default-track-options) vk-track-response)
+       founded-tracks (conj (utils/to-track-map track-list) (:founded-tracks db))]
+      (assoc db :founded-tracks founded-tracks :loading? false))))
+
+(re-frame/register-handler
   :process-search-track-response
   (fn
     [db [_ response]]
     (let
       [vk-track-response (rest response.response)
-       default-track-options { :playing? false :progress 0 }
-       track-list (map #(merge (js->clj % :keywordize-keys true) default-track-options) vk-track-response)
-       founded-tracks (to-track-map track-list)]
-      (assoc db :founded-tracks founded-tracks))))
+       track-list (map #(merge (js->clj % :keywordize-keys true) utils/default-track-options) vk-track-response)
+       founded-tracks (utils/to-track-map track-list)
+       active-track-aid (:active-track-aid db)
+       active-track (active-track-aid (:founded-tracks db))
+       hidden-active-track (assoc active-track :hidden? true)
+       tracks-with-active (assoc founded-tracks active-track-aid hidden-active-track)]
+      (assoc db :founded-tracks (if (nil? active-track) founded-tracks tracks-with-active) :loading? false))))
 
-(defn to-track-map [track-list]
-  (into
-    {}
-    (map
-      #(hash-map
-         (let
-           [aid-key (keyword (str (:aid %)))]
-           aid-key)
-         %) track-list)))
 
 (re-frame/register-handler
   :search-track-text-changed
   (fn
     [db [_ value]]
-    (js/VK.Api.call "audio.search" (js-obj "q" value) #(re-frame/dispatch [:process-search-track-response %]))
-    (assoc db :search-track-text value)))
+    (update-in db [:audio-query] #(assoc % :search-track-text value :offset 0))))
 
 (re-frame/register-handler
   :track-play
   (fn
     [db [_ aid]]
     (let [db-tracks (:founded-tracks db)
-          stopped-tracks (to-track-map
-                             (map #(let [aid (first %)
-                                         track (assoc (second %) :playing? false)]
-                                     assoc nil aid track) db-tracks))
+          stopped-tracks (utils/to-track-map
+                           (map #(let [aid (first %)
+                                       track (assoc (second %) :playing? false)]
+                                   assoc nil aid track) db-tracks))
           founded-tracks (update-in stopped-tracks [aid] #(assoc % :playing? true))]
       (assoc db :founded-tracks founded-tracks :active-track-aid aid))))
 
@@ -150,20 +181,5 @@
 (re-frame/register-handler
   :volume-change
   (fn [db [_ value]]
-      (assoc db :options (update-in options [:volume] (constantly value)))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    (assoc db :options (update-in options [:volume] (constantly value)))))
 
